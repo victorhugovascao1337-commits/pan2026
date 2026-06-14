@@ -41,7 +41,9 @@ async function sendFacebook(order: any, items: any[]) {
   const tp = order.tracking_params || {};
   const user_data: any = {};
   if (email) user_data.em = [await sha256(email)];
-  if (tp.fbclid) user_data.fbc = `fb.1.${Math.floor(Date.now() / 1000)}.${tp.fbclid}`;
+  if (tp.fbp) user_data.fbp = tp.fbp;                          // cookie do Pixel -> match exato
+  if (tp.fbc) user_data.fbc = tp.fbc;
+  else if (tp.fbclid) user_data.fbc = `fb.1.${Math.floor(Date.now() / 1000)}.${tp.fbclid}`;
   const body = {
     data: [{
       event_name: "Purchase",

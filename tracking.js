@@ -33,7 +33,15 @@
     keys.forEach(function (k) { var v = q.get(k); if (v) { got[k] = v; has = true; } });
     if (has) { try { localStorage.setItem('paniniUTM', JSON.stringify(got)); } catch (e) {} }
   })();
-  function getUTMs() { try { return JSON.parse(localStorage.getItem('paniniUTM')) || {}; } catch (e) { return {}; } }
+  function cookie(n) { var m = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return m ? decodeURIComponent(m.pop()) : ''; }
+  function getUTMs() {
+    var u = {};
+    try { u = JSON.parse(localStorage.getItem('paniniUTM')) || {}; } catch (e) {}
+    var fbp = cookie('_fbp'), fbc = cookie('_fbc');   // cookies do Pixel -> match exato no servidor
+    if (fbp) u.fbp = fbp;
+    if (fbc) u.fbc = fbc;
+    return u;
+  }
 
   /* ---------------- helpers de evento ---------------- */
   window.Track = {
