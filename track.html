@@ -6,67 +6,96 @@
 <title>Track your order | Panini America</title>
 <link rel="icon" href="fav-icon-1.png">
 <style>
-  body{ margin:0; font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#1a1a1a; background:#fafafa; }
-  .topbar{ display:flex; align-items:center; justify-content:center; padding:16px; border-bottom:1px solid #e3e3e3; background:#fff; }
+  :root{ --blue:#2563eb; --ink:#1a1a1a; --muted:#6b7177; --line:#e6e8eb; --bg:#f6f7f9; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg); }
+  .topbar{ display:flex; align-items:center; justify-content:center; padding:16px; border-bottom:1px solid var(--line); background:#fff; }
   .topbar img{ height:30px; }
-  .wrap{ max-width:620px; margin:36px auto; padding:0 16px; }
+  .wrap{ max-width:1180px; margin:24px auto; padding:0 16px; }
   h1{ font-size:24px; text-transform:uppercase; letter-spacing:.02em; margin:0 0 6px; }
-  .sub{ color:#6b7177; font-size:14px; margin:0 0 24px; }
-  .card{ background:#fff; border:1px solid #e6e6e6; border-radius:14px; padding:24px; }
-  label{ display:block; font-size:12px; color:#6b7177; text-transform:uppercase; letter-spacing:.06em; margin:0 0 6px; }
-  .inp{ width:100%; height:46px; border:1px solid #c9cccf; border-radius:8px; padding:0 12px; font-size:15px; box-sizing:border-box; outline:none; }
-  .inp:focus{ border-color:#2b2f8a; box-shadow:0 0 0 1px #2b2f8a; }
+  .sub{ color:var(--muted); font-size:14px; margin:0 0 20px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px; }
+  label{ display:block; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin:0 0 6px; }
+  .inp{ width:100%; height:46px; border:1px solid #c9cccf; border-radius:8px; padding:0 12px; font-size:15px; outline:none; }
+  .inp:focus{ border-color:var(--blue); box-shadow:0 0 0 1px var(--blue); }
   .mb{ margin-bottom:14px; }
   .btn{ width:100%; height:50px; background:#111; color:#fff; border:0; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; }
   .btn:disabled{ opacity:.6; }
   #msg{ color:#c0392b; font-size:14px; margin-top:12px; min-height:18px; }
-  /* result */
-  #result{ display:none; margin-top:8px; }
-  .ord{ font-family:monospace; font-size:13px; background:#f2f3f5; border-radius:6px; padding:3px 8px; }
-  .steps{ display:flex; justify-content:space-between; margin:26px 0 8px; position:relative; }
-  .steps::before{ content:""; position:absolute; top:15px; left:8%; right:8%; height:3px; background:#e3e3e3; z-index:0; }
-  .stepbar{ position:absolute; top:15px; left:8%; height:3px; background:#1e7e34; z-index:1; transition:width .3s; }
-  .step{ position:relative; z-index:2; text-align:center; flex:1; }
-  .dot{ width:32px; height:32px; border-radius:50%; background:#e3e3e3; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; font-weight:700; }
-  .step.done .dot{ background:#1e7e34; }
-  .step .lbl{ font-size:12px; text-transform:uppercase; color:#6b7177; }
-  .step.done .lbl{ color:#1a1a1a; font-weight:700; }
-  .row{ display:flex; justify-content:space-between; font-size:14px; padding:8px 0; border-top:1px solid #eee; }
-  .track-box{ background:#f4f5f7; border-radius:10px; padding:14px; margin-top:16px; font-size:14px; }
-  .track-box a{ color:#2b2f8a; font-weight:700; }
-  .badge-cancel{ background:#c0392b; color:#fff; border-radius:6px; padding:3px 10px; font-size:12px; font-weight:700; text-transform:uppercase; }
-  .item{ display:flex; justify-content:space-between; font-size:13px; color:#444; padding:4px 0; }
+  .form-wrap{ max-width:560px; margin:0 auto; }
+  #result{ display:none; }
+  /* timeline */
+  .track-steps{ display:flex; overflow-x:auto; padding:14px 6px 6px; scrollbar-width:thin; }
+  .tstep{ flex:0 0 auto; width:104px; display:flex; flex-direction:column; align-items:center; position:relative; }
+  .tline{ position:absolute; top:20px; left:-50%; width:100%; height:3px; background:#e3e6ea; z-index:0; }
+  .tstep:first-child .tline{ display:none; }
+  .tstep.done .tline{ background:var(--blue); }
+  .tcircle{ width:40px; height:40px; border-radius:50%; background:#fff; border:2px solid #d8dce0; color:#aab0b6; display:flex; align-items:center; justify-content:center; z-index:1; }
+  .tstep.done .tcircle{ background:var(--blue); border-color:var(--blue); color:#fff; }
+  .tstep.current .tcircle{ background:var(--blue); border-color:#93c5fd; color:#fff; box-shadow:0 0 0 5px #dbeafe; }
+  .tlabel{ font-size:11.5px; text-align:center; margin-top:9px; color:var(--muted); line-height:1.25; }
+  .tstep.done .tlabel, .tstep.current .tlabel{ color:var(--ink); font-weight:600; }
+  .tpill{ font-size:9.5px; margin-top:5px; padding:2px 7px; border-radius:10px; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
+  .tpill.blue{ background:#e7efff; color:#2563eb; } .tpill.green{ background:#e6f6ec; color:#1e7e34; }
+  /* layout */
+  .cols{ display:grid; grid-template-columns:1fr 380px; gap:20px; margin-top:20px; align-items:start; }
+  .row{ display:flex; align-items:center; gap:14px; padding:14px 0; border-top:1px solid #f0f0f0; }
+  .row:first-child{ border-top:0; }
+  .thumb{ width:54px; height:54px; border:1px solid var(--line); border-radius:8px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; flex:0 0 auto; }
+  .thumb img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .it-name{ flex:1; font-size:14px; } .it-name small{ color:var(--muted); display:block; margin-top:2px; }
+  .it-price{ font-weight:600; font-size:14px; white-space:nowrap; }
+  .total{ display:flex; justify-content:space-between; font-weight:700; font-size:17px; border-top:2px solid #eee; padding-top:16px; margin-top:6px; }
+  .side .card{ margin-bottom:16px; }
+  .side h3{ display:flex; align-items:center; gap:8px; font-size:15px; margin:0 0 12px; }
+  .mono{ font-family:monospace; font-size:13px; color:var(--muted); }
+  .addr{ font-size:14px; color:#333; line-height:1.55; } .addr strong{ color:var(--ink); }
+  .switch{ width:42px; height:24px; border-radius:12px; background:#d8dce0; position:relative; cursor:pointer; flex:0 0 auto; }
+  .switch::after{ content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:.2s; }
+  .switch.on{ background:var(--blue); } .switch.on::after{ left:21px; }
+  .banner{ padding:10px 14px; border-radius:8px; font-size:14px; font-weight:600; margin-bottom:14px; }
+  .banner.warn{ background:#fff6e5; color:#9a6b00; } .banner.cancel{ background:#fdecea; color:#c0392b; }
+  @media(max-width:840px){ .cols{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
-<div class="topbar">
-  <img src="./assets-store/panini_logo.cf5a332aa63692f572bfcc1072ec5fa4.svg" alt="Panini America">
-</div>
+<div class="topbar"><img src="./assets-store/panini_logo.cf5a332aa63692f572bfcc1072ec5fa4.svg" alt="Panini America"></div>
 <div class="wrap">
   <h1>Track your order</h1>
   <p class="sub">Enter your order number and email to see the latest status.</p>
-  <div class="card">
-    <div id="form">
-      <div class="mb"><label>Order number</label><input class="inp" id="order" placeholder="e.g. 1e763dd0-..."></div>
-      <div class="mb"><label>Email</label><input class="inp" id="email" type="email" placeholder="you@example.com"></div>
-      <button class="btn" id="trackBtn">Track order</button>
-      <div id="msg"></div>
-    </div>
-    <div id="result">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span>Order <span class="ord" id="r-id"></span></span>
-        <span id="r-cancel"></span>
+
+  <div id="form" class="form-wrap"><div class="card">
+    <div class="mb"><label>Order number</label><input class="inp" id="order" placeholder="e.g. 1e763dd0-..."></div>
+    <div class="mb"><label>Email</label><input class="inp" id="email" type="email" placeholder="you@example.com"></div>
+    <button class="btn" id="trackBtn">Track order</button>
+    <div id="msg"></div>
+  </div></div>
+
+  <div id="result">
+    <div id="banner"></div>
+    <div class="card"><div class="track-steps" id="steps"></div></div>
+    <div class="cols">
+      <div class="card">
+        <h3 style="text-transform:none;font-size:18px;">Order Items</h3>
+        <div id="items"></div>
+        <div class="total"><span>Total</span><span id="total"></span></div>
+        <div style="margin-top:18px;"><span class="mono">Order #<span id="ordid"></span></span></div>
+        <button class="btn" id="againBtn" style="margin-top:16px;background:#fff;color:#111;border:1px solid #ccc;">Track another order</button>
       </div>
-      <div class="steps" id="steps">
-        <div class="stepbar" id="stepbar" style="width:0;"></div>
-        <div class="step" data-step="1"><div class="dot">1</div><div class="lbl">Paid</div></div>
-        <div class="step" data-step="2"><div class="dot">2</div><div class="lbl">Shipped</div></div>
-        <div class="step" data-step="3"><div class="dot">3</div><div class="lbl">Delivered</div></div>
+      <div class="side">
+        <div class="card">
+          <h3>📦 Tracking Info</h3>
+          <div id="trk"></div>
+        </div>
+        <div class="card" id="addrCard">
+          <h3>📍 Shipping Address</h3>
+          <div class="addr" id="addr"></div>
+        </div>
+        <div class="card">
+          <h3 style="justify-content:space-between;">🔔 Email Updates <span class="switch" id="emailSwitch"></span></h3>
+          <p style="color:var(--muted);font-size:13px;margin:0;">Get notified when your order status changes.</p>
+        </div>
       </div>
-      <div class="track-box" id="r-track" style="display:none;"></div>
-      <div id="r-items" style="margin-top:16px;"></div>
-      <div class="row" style="border-top:2px solid #ddd;font-weight:700;"><span>Total</span><span id="r-total"></span></div>
-      <button class="btn" id="againBtn" style="margin-top:18px;background:#fff;color:#111;border:1px solid #ccc;">Track another order</button>
     </div>
   </div>
 </div>
@@ -75,11 +104,41 @@
 var SUPABASE_URL='https://finpdwsggcphzqypnebg.supabase.co';
 var SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpbnBkd3NnZ2NwaHpxeXBuZWJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzOTk4MzYsImV4cCI6MjA5Njk3NTgzNn0.C9Rq6QcTHi_vKbMLXnyeoS52LzfMbxPO8SY8pq2RoYM';
 
+/* ---- icons ---- */
+var IC={
+ check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="20" height="20"><path d="M5 13l4 4L19 7"/></svg>',
+ clip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 9h6M9 13h6"/></svg>',
+ card:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>',
+ box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7"/></svg>',
+ truck:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><rect x="2" y="6" width="11" height="9" rx="1"/><path d="M13 9h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>',
+ plane:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>',
+ pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+ shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>',
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>'
+};
+
+/* ---- 15 steps: label, day-offset (auto-advances), icon, pill ---- */
+var STEPS=[
+ {l:'Order Confirmed', d:0, i:'clip', p:'Confirmed'},
+ {l:'Payment Approved', d:0, i:'card', p:'Paid'},
+ {l:'Invoice Issued', d:0, i:'clip'},
+ {l:'Processing', d:0, i:'box', p:'Processing'},
+ {l:'Packed', d:1, i:'box', p:'Packed'},
+ {l:'Collected by Carrier', d:1, i:'truck', p:'Collected'},
+ {l:'Dispatched', d:2, i:'truck'},
+ {l:'International Transit', d:3, i:'plane'},
+ {l:'Arrived at Destination', d:4, i:'pin'},
+ {l:'Customs Clearance', d:5, i:'shield'},
+ {l:'Customs Cleared', d:6, i:'shield'},
+ {l:'Local Distribution Center', d:7, i:'home'},
+ {l:'Out for Delivery', d:8, i:'truck'},
+ {l:'Delivery Attempt', d:8, i:'pin'},
+ {l:'Delivered', d:9, i:'pin'}
+];
+
 var p=new URLSearchParams(location.search);
 if(p.get('order')) document.getElementById('order').value=p.get('order');
 if(p.get('email')) document.getElementById('email').value=p.get('email');
-
-var STEP={ paid:1, shipped:2, delivered:3 };
 function money(c){ return '$'+(c/100).toFixed(2); }
 
 async function track(){
@@ -87,8 +146,7 @@ async function track(){
   msg.textContent=''; btn.disabled=true; btn.textContent='Tracking...';
   try{
     var r=await fetch(SUPABASE_URL+'/functions/v1/track-order',{
-      method:'POST',
-      headers:{'Content-Type':'application/json',apikey:SUPABASE_ANON,Authorization:'Bearer '+SUPABASE_ANON},
+      method:'POST', headers:{'Content-Type':'application/json',apikey:SUPABASE_ANON,Authorization:'Bearer '+SUPABASE_ANON},
       body:JSON.stringify({ order_id:document.getElementById('order').value.trim(), email:document.getElementById('email').value.trim() })
     });
     var d=await r.json();
@@ -98,28 +156,66 @@ async function track(){
   finally{ btn.disabled=false; btn.textContent='Track order'; }
 }
 
+function currentStep(d){
+  if(d.status==='canceled') return -2;
+  if(d.status==='pending') return -1;
+  if(d.status==='delivered') return STEPS.length-1;
+  // progressão automática por tempo desde o created_at
+  var days=Math.floor((Date.now()-new Date(d.created_at).getTime())/86400000);
+  var idx=0;
+  for(var i=0;i<STEPS.length;i++){ if(STEPS[i].d<=days) idx=i; }
+  return idx;
+}
+
 function show(d){
   document.getElementById('form').style.display='none';
   document.getElementById('result').style.display='block';
-  document.getElementById('r-id').textContent=d.id;
-  document.getElementById('r-total').textContent=money(d.total_cents);
+  var cur=currentStep(d);
+
+  // banner
+  var b=document.getElementById('banner'); b.className=''; b.innerHTML='';
+  if(cur===-1){ b.className='banner warn'; b.textContent='Awaiting payment confirmation.'; }
+  if(cur===-2){ b.className='banner cancel'; b.textContent='This order was canceled.'; }
+
   // steps
-  var lvl=STEP[d.status]||0;
-  document.querySelectorAll('.step').forEach(function(s){ s.classList.toggle('done', parseInt(s.getAttribute('data-step'))<=lvl); });
-  document.getElementById('stepbar').style.width = lvl>=3?'84%':(lvl>=2?'42%':'0');
-  var cancel=document.getElementById('r-cancel');
-  cancel.innerHTML = d.status==='canceled' ? '<span class="badge-cancel">Canceled</span>' : '';
-  // tracking
-  var tb=document.getElementById('r-track');
-  if(d.tracking_number){
-    tb.style.display='block';
-    var link=d.tracking_url?('<a href="'+d.tracking_url+'" target="_blank" rel="noopener">Track package &rarr;</a>'):'';
-    tb.innerHTML='<strong>'+(d.carrier||'Carrier')+'</strong> &middot; Tracking: <strong>'+d.tracking_number+'</strong><br>'+link;
-  } else { tb.style.display='none'; }
-  // items
   var html='';
-  (d.items||[]).forEach(function(it){ html+='<div class="item"><span>'+it.quantity+'× '+it.name+'</span><span>'+money(it.unit_price_cents*it.quantity)+'</span></div>'; });
-  document.getElementById('r-items').innerHTML=html;
+  for(var i=0;i<STEPS.length;i++){
+    var s=STEPS[i];
+    var cls = i<cur?'done' : (i===cur?'current':'');
+    var icon = (i<cur) ? IC.check : IC[s.i];
+    var pill = (i<=cur && cur>=0 && s.p) ? ('<span class="tpill '+(i<2||s.p==='Collected'||s.p==='Confirmed'||s.p==='Paid'?'blue':'green')+'">'+s.p+'</span>') : '';
+    html+='<div class="tstep '+cls+'"><div class="tline"></div><div class="tcircle">'+icon+'</div><div class="tlabel">'+s.l+'</div>'+pill+'</div>';
+  }
+  document.getElementById('steps').innerHTML=html;
+
+  // items
+  var ih='';
+  (d.items||[]).forEach(function(it){
+    ih+='<div class="row"><div class="thumb"></div><div class="it-name">'+it.name+'<small>Qty: '+it.quantity+'</small></div><div class="it-price">'+money(it.unit_price_cents*it.quantity)+'</div></div>';
+  });
+  document.getElementById('items').innerHTML=ih;
+  document.getElementById('total').textContent=money(d.total_cents);
+  document.getElementById('ordid').textContent=d.id;
+
+  // tracking info
+  var trk=document.getElementById('trk');
+  if(d.tracking_number){
+    var link=d.tracking_url?('<div style="margin-top:8px;"><a href="'+d.tracking_url+'" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700;">Track package &rarr;</a></div>'):'';
+    trk.innerHTML='<div style="font-weight:700;">'+(d.carrier||'USPS')+'</div><div class="mono" style="margin-top:4px;">'+d.tracking_number+'</div>'+link;
+  } else { trk.innerHTML='<span class="mono">Pending</span>'; }
+
+  // address
+  var addrCard=document.getElementById('addrCard');
+  if(d.shipping_name || d.shipping_address){
+    document.getElementById('addr').innerHTML='<strong>'+(d.shipping_name||'')+'</strong><br>'+
+      (d.shipping_address?d.shipping_address+'<br>':'')+
+      [d.shipping_city,d.shipping_state,d.shipping_zip].filter(Boolean).join(', ')+'<br>'+(d.shipping_country||'');
+    addrCard.style.display='';
+  } else { addrCard.style.display='none'; }
+
+  // center current step in view
+  var el=document.querySelectorAll('.tstep')[Math.max(0,cur)];
+  if(el) el.scrollIntoView({inline:'center', block:'nearest'});
 }
 
 document.getElementById('trackBtn').addEventListener('click',track);
@@ -127,7 +223,7 @@ document.getElementById('againBtn').addEventListener('click',function(){
   document.getElementById('result').style.display='none';
   document.getElementById('form').style.display='block';
 });
-// auto-track if order came in the URL
+document.getElementById('emailSwitch').addEventListener('click',function(){ this.classList.toggle('on'); });
 if(p.get('order')) track();
 </script>
 </body>

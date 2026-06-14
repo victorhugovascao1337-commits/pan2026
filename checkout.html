@@ -294,6 +294,10 @@ var PUBLISHABLE_KEY = 'pk_test_51RcE13E1vGzTI3ZohIyN2ke1kno13mcdN72FmXbpv50mVdyj
 var SUPABASE_URL = 'https://finpdwsggcphzqypnebg.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpbnBkd3NnZ2NwaHpxeXBuZWJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzOTk4MzYsImV4cCI6MjA5Njk3NTgzNn0.C9Rq6QcTHi_vKbMLXnyeoS52LzfMbxPO8SY8pq2RoYM';
 var CREATE_INTENT_URL = SUPABASE_URL + '/functions/v1/create-checkout';
+function chkAddr(){
+  var g=function(id){ var e=document.getElementById(id); return e?e.value.trim():''; };
+  return { name:(g('fname')+' '+g('lname')).trim(), line1:g('addr'), city:g('city'), state:g('state'), zip:g('zip'), country:g('country') };
+}
 
 var stripe = Stripe(PUBLISHABLE_KEY);
 var elements = stripe.elements({
@@ -313,7 +317,7 @@ async function payViaBackend(){
   var r = await fetch(CREATE_INTENT_URL, {
     method:'POST',
     headers:{ 'Content-Type':'application/json', 'apikey': SUPABASE_ANON, 'Authorization':'Bearer ' + SUPABASE_ANON },
-    body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value })
+    body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value, address: chkAddr() })
   });
   var d = await r.json();
   if(!r.ok || d.error) throw new Error(d.error || ('Backend error ' + r.status));
@@ -347,7 +351,7 @@ btn.addEventListener('click', async function(){
     var r = await fetch(CREATE_INTENT_URL, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'apikey': SUPABASE_ANON, 'Authorization':'Bearer ' + SUPABASE_ANON },
-      body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value })
+      body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value, address: chkAddr() })
     });
     var d = await r.json();
     if(!r.ok || d.error){ msg.className='err'; msg.textContent = d.error || ('Backend error (' + r.status + '). Is the create-checkout function deployed?'); btn.disabled=false; btn.textContent='Complete Purchase'; return; }

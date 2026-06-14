@@ -16,7 +16,8 @@ const cors = {
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
-const SEL = "select=id,email,status,total_cents,currency,tracking_number,carrier,tracking_url,created_at";
+const SEL = "select=id,email,status,total_cents,currency,tracking_number,carrier,tracking_url,created_at," +
+  "shipping_name,shipping_address,shipping_city,shipping_state,shipping_zip,shipping_country";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -49,7 +50,11 @@ serve(async (req) => {
     return json({
       id: o.id, status: o.status, total_cents: o.total_cents, currency: o.currency,
       tracking_number: o.tracking_number, carrier: o.carrier, tracking_url: o.tracking_url,
-      created_at: o.created_at, items,
+      created_at: o.created_at,
+      shipping_name: o.shipping_name, shipping_address: o.shipping_address,
+      shipping_city: o.shipping_city, shipping_state: o.shipping_state,
+      shipping_zip: o.shipping_zip, shipping_country: o.shipping_country,
+      items,
     });
   } catch (e) {
     return json({ error: String(e) }, 500);

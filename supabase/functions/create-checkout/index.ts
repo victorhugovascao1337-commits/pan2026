@@ -18,6 +18,13 @@ const cors = {
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
+// Gera um código de rastreio no estilo USPS (22 dígitos, agrupados de 4 em 4)
+function uspsCode(): string {
+  let d = "9400";
+  for (let i = 0; i < 18; i++) d += Math.floor(Math.random() * 10);
+  return d.replace(/(.{4})/g, "$1 ").trim();
+}
+
 const sbHeaders = {
   apikey: SERVICE_ROLE,
   Authorization: `Bearer ${SERVICE_ROLE}`,
@@ -27,8 +34,9 @@ const sbHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { items = [], shipping = "standard", email } = await req.json();
+    const { items = [], shipping = "standard", email, address } = await req.json();
     if (!Array.isArray(items) || items.length === 0) return json({ error: "Empty cart" }, 400);
+    const a = address || {};
 
     // slugs -> produtos reais do banco (preço autoritativo)
     const slugs = items.map((i: any) => String(i.slug));
@@ -60,6 +68,10 @@ serve(async (req) => {
       body: JSON.stringify({
         email: email || null, status: "pending", subtotal_cents: subtotal,
         shipping_cents: shippingCents, total_cents: total, currency: "usd",
+        tracking_number: uspsCode(), carrier: "USPS",
+        shipping_name: a.name || null, shipping_address: a.line1 || null,
+        shipping_city: a.city || null, shipping_state: a.state || null,
+        shipping_zip: a.zip || null, shipping_country: a.country || "United States",
       }),
     });
     const orderRow = (await orderRes.json())[0];
