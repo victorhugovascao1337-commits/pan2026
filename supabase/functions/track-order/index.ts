@@ -43,7 +43,7 @@ serve(async (req) => {
     }
 
     const items = await (await fetch(
-      `${SUPABASE_URL}/rest/v1/order_items?order_id=eq.${o.id}&select=name,quantity,unit_price_cents`,
+      `${SUPABASE_URL}/rest/v1/order_items?order_id=eq.${o.id}&select=name,quantity,unit_price_cents,products(image)`,
       { headers: sb },
     )).json();
 

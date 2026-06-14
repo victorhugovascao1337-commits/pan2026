@@ -140,6 +140,12 @@ var p=new URLSearchParams(location.search);
 if(p.get('order')) document.getElementById('order').value=p.get('order');
 if(p.get('email')) document.getElementById('email').value=p.get('email');
 function money(c){ return '$'+(c/100).toFixed(2); }
+function fixImg(src){
+  if(!src) return '';
+  return src.replace('FIFA World Cup 2026 Official Sticker Collection _ Panini America_files','assets-fifa')
+           .replace('Panini America Online Store _ Shop Sports Trading Cards &amp; Memorabilia!_files','assets-store')
+           .replace('Panini America Online Store _ Shop Sports Trading Cards & Memorabilia!_files','assets-store');
+}
 
 async function track(){
   var btn=document.getElementById('trackBtn'), msg=document.getElementById('msg');
@@ -191,18 +197,23 @@ function show(d){
   // items
   var ih='';
   (d.items||[]).forEach(function(it){
-    ih+='<div class="row"><div class="thumb"></div><div class="it-name">'+it.name+'<small>Qty: '+it.quantity+'</small></div><div class="it-price">'+money(it.unit_price_cents*it.quantity)+'</div></div>';
+    var img=it.products&&it.products.image?fixImg(it.products.image):'';
+    ih+='<div class="row"><div class="thumb">'+(img?'<img src="'+img+'" alt="">':'')+'</div><div class="it-name">'+it.name+'<small>Qty: '+it.quantity+'</small></div><div class="it-price">'+money(it.unit_price_cents*it.quantity)+'</div></div>';
   });
   document.getElementById('items').innerHTML=ih;
   document.getElementById('total').textContent=money(d.total_cents);
   document.getElementById('ordid').textContent=d.id;
 
-  // tracking info
+  // tracking info — código só aparece a partir de "Arrived at Destination"
+  var arrivedIdx=STEPS.findIndex(function(s){ return s.l==='Arrived at Destination'; });
   var trk=document.getElementById('trk');
-  if(d.tracking_number){
+  if(d.tracking_number && cur>=arrivedIdx){
     var link=d.tracking_url?('<div style="margin-top:8px;"><a href="'+d.tracking_url+'" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700;">Track package &rarr;</a></div>'):'';
     trk.innerHTML='<div style="font-weight:700;">'+(d.carrier||'USPS')+'</div><div class="mono" style="margin-top:4px;">'+d.tracking_number+'</div>'+link;
-  } else { trk.innerHTML='<span class="mono">Pending</span>'; }
+  } else {
+    trk.innerHTML='<div style="font-weight:700;">'+(d.carrier||'USPS')+'</div>'+
+      '<div class="mono" style="margin-top:4px;">Available once your package arrives at the destination.</div>';
+  }
 
   // address
   var addrCard=document.getElementById('addrCard');
