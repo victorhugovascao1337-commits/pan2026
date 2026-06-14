@@ -75,6 +75,7 @@
             variant: btn.getAttribute('data-variant') || '',
             qty: qty
           });
+          if (window.Track) Track.addToCart({ id: btn.getAttribute('data-slug'), name: btn.getAttribute('data-name'), value: (parseFloat(btn.getAttribute('data-price')) || 0) * qty });
           // add-ons marcados em "You might also like these"
           var ups = document.querySelectorAll('.upsell-item'), extra = 0;
           for (var u = 0; u < ups.length; u++) {

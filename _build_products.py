@@ -3,7 +3,7 @@
 Panini offline site's head/header/footer, replicating the full akgstore
 description layout (How It Works, Collecting Experience stats, feature row,
 and customer reviews). Also repoints the FIFA grid cards at these pages."""
-import io, re
+import io, re, json
 
 FIFA = r"C:\Users\Vetz\Desktop\panini-offline\fifa-world-cup-2026.html"
 IMG = "./assets-fifa/"
@@ -416,7 +416,9 @@ def build_main(p):
 
 
 for p in products:
-    html = PREFIX + build_main(p) + '\n<script src="cart.js"></script>\n' + SUFFIX
+    prod_js = ('<script>window.__PRODUCT__=%s;</script><script src="tracking.js"></script>'
+               % json.dumps({"id": p["slug"], "name": p["title"], "value": float(p["price"])}))
+    html = PREFIX + build_main(p) + '\n<script src="cart.js"></script>\n' + prod_js + '\n' + SUFFIX
     html = re.sub(r"<title>.*?</title>", "<title>%s | Panini America</title>" % esc(p["title"]),
                   html, count=1, flags=re.IGNORECASE | re.DOTALL)
     out = r"C:\Users\Vetz\Desktop\panini-offline\%s.html" % p["slug"]

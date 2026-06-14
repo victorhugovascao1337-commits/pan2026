@@ -34,7 +34,7 @@ const sbHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { items = [], shipping = "standard", email, address } = await req.json();
+    const { items = [], shipping = "standard", email, address, utm } = await req.json();
     if (!Array.isArray(items) || items.length === 0) return json({ error: "Empty cart" }, 400);
     const a = address || {};
 
@@ -72,6 +72,7 @@ serve(async (req) => {
         shipping_name: a.name || null, shipping_address: a.line1 || null,
         shipping_city: a.city || null, shipping_state: a.state || null,
         shipping_zip: a.zip || null, shipping_country: a.country || "United States",
+        tracking_params: utm || {},
       }),
     });
     const orderRow = (await orderRes.json())[0];

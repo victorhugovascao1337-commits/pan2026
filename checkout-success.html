@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Order Confirmed | Panini America</title>
 <link rel="icon" href="fav-icon-1.png">
+<script src="tracking.js"></script>
 <style>
   body{ margin:0; font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#1a1a1a; background:#fafafa; }
   .topbar{ display:flex; align-items:center; justify-content:center; padding:18px; border-bottom:1px solid #e3e3e3; background:#fff; }
@@ -42,6 +43,19 @@
   if(status && status !== 'succeeded'){
     document.querySelector('h1').textContent = 'Payment ' + status;
     document.querySelector('.check').style.background = '#c0392b';
+  }
+
+  /* Facebook Purchase (navegador) — mesmo event_id do servidor (dedup) */
+  var SUPABASE_URL='https://finpdwsggcphzqypnebg.supabase.co';
+  var SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpbnBkd3NnZ2NwaHpxeXBuZWJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzOTk4MzYsImV4cCI6MjA5Njk3NTgzNn0.C9Rq6QcTHi_vKbMLXnyeoS52LzfMbxPO8SY8pq2RoYM';
+  if(order && (!status || status==='succeeded')){
+    fetch(SUPABASE_URL+'/functions/v1/track-order',{ method:'POST', headers:{'Content-Type':'application/json',apikey:SUPABASE_ANON,Authorization:'Bearer '+SUPABASE_ANON}, body:JSON.stringify({ order_id:order }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d || !d.total_cents) return;
+        var ids=(d.items||[]).map(function(it){ return it.products && it.products.slug; }).filter(Boolean);
+        (function fire(){ if(window.Track){ Track.purchase({ value:d.total_cents/100, ids:ids, eventID:order }); } else setTimeout(fire,300); })();
+      }).catch(function(){});
   }
 </script>
 </body>

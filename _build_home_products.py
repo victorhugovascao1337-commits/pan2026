@@ -3,7 +3,7 @@
 own product page at HALF PRICE (original struck through, SAVE 50%). Also rewrites
 the home-page cards to show the half price and link to the local sale page.
 Copa / FIFA World Cup products are intentionally left untouched."""
-import io, re
+import io, re, json
 from decimal import Decimal, ROUND_HALF_UP
 
 INDEX = r"C:\Users\Vetz\Desktop\panini-offline\index.html"
@@ -213,7 +213,9 @@ def build_main(p):
 
 # ----------------------------------------------------------- write sale pages
 for p in products:
-    html = PREFIX + build_main(p) + '\n<script src="cart.js"></script>\n' + SUFFIX
+    prod_js = ('<script>window.__PRODUCT__=%s;</script><script src="tracking.js"></script>'
+               % json.dumps({"id": p["slug"], "name": p["title"], "value": float(p["sale"].replace(",", ""))}))
+    html = PREFIX + build_main(p) + '\n<script src="cart.js"></script>\n' + prod_js + '\n' + SUFFIX
     html = re.sub(r"<title>.*?</title>", "<title>%s | Panini America</title>" % esc(p["title"]),
                   html, count=1, flags=re.IGNORECASE | re.DOTALL)
     io.open(r"C:\Users\Vetz\Desktop\panini-offline\%s.html" % p["slug"], "w", encoding="utf-8").write(html)

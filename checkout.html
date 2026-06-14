@@ -6,6 +6,7 @@
 <title>Checkout | Panini America</title>
 <link rel="icon" href="fav-icon-1.png">
 <script src="https://js.stripe.com/v3/"></script>
+<script src="tracking.js"></script>
 <style>
   :root{ --ink:#1a1a1a; --muted:#6b7177; --line:#e3e3e3; --brand:#2b2f8a; --bg:#fff; --summary:#fafafa; }
   *{ box-sizing:border-box; }
@@ -208,6 +209,12 @@ if(!Array.isArray(cart) || !cart.length) cart = DEMO;
 var subtotal = cart.reduce(function(s,i){ return s + (i.price*i.qty); }, 0);
 function money(n){ return '$' + n.toFixed(2); }
 
+/* Facebook InitiateCheckout (espera o tracking.js carregar) */
+(function fireIC(){
+  if(window.Track){ Track.initiateCheckout({ value: subtotal, num_items: cart.reduce(function(s,i){ return s+(parseInt(i.qty)||1); },0), ids: cart.map(function(i){ return i.slug; }) }); }
+  else { setTimeout(fireIC, 300); }
+})();
+
 /* render summary */
 var html = '';
 cart.forEach(function(i){
@@ -317,7 +324,7 @@ async function payViaBackend(){
   var r = await fetch(CREATE_INTENT_URL, {
     method:'POST',
     headers:{ 'Content-Type':'application/json', 'apikey': SUPABASE_ANON, 'Authorization':'Bearer ' + SUPABASE_ANON },
-    body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value, address: chkAddr() })
+    body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value, address: chkAddr(), utm: (window.Track ? Track.getUTMs() : {}) })
   });
   var d = await r.json();
   if(!r.ok || d.error) throw new Error(d.error || ('Backend error ' + r.status));
@@ -351,7 +358,7 @@ btn.addEventListener('click', async function(){
     var r = await fetch(CREATE_INTENT_URL, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'apikey': SUPABASE_ANON, 'Authorization':'Bearer ' + SUPABASE_ANON },
-      body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value, address: chkAddr() })
+      body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value, address: chkAddr(), utm: (window.Track ? Track.getUTMs() : {}) })
     });
     var d = await r.json();
     if(!r.ok || d.error){ msg.className='err'; msg.textContent = d.error || ('Backend error (' + r.status + '). Is the create-checkout function deployed?'); btn.disabled=false; btn.textContent='Complete Purchase'; return; }
