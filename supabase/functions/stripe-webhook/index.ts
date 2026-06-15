@@ -88,7 +88,7 @@ async function sendUtmify(order: any, items: any[]) {
       utm_medium: tp.utm_medium || null, utm_content: tp.utm_content || null, utm_term: tp.utm_term || null,
     },
     commission: { totalPriceInCents: order.total_cents, gatewayFeeInCents: 0, userCommissionInCents: order.total_cents },
-    isTest: true, // <-- trocar para false quando for produção (live)
+    isTest: false, // aparece no painel da UTMify (em Stripe teste isso conta como venda; apague depois se quiser)
   };
   try {
     await fetch("https://api.utmify.com.br/api-credentials/orders", {
