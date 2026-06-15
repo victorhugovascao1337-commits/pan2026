@@ -91,8 +91,16 @@ async function sendUtmify(order: any, items: any[]) {
     isTest: true, // <-- trocar para false quando for produção (live)
   };
   try {
-    await fetch("https://api.utmify.com.br/api-credentials/orders",
-      { method: "POST", headers: { "Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN }, body: JSON.stringify(body) });
+    await fetch("https://api.utmify.com.br/api-credentials/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-token": UTMIFY_API_TOKEN,
+        // UTMify fica atrás do Cloudflare e bloqueia requisições sem UA de navegador (erro 1010)
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+      },
+      body: JSON.stringify(body),
+    });
   } catch (_) { /* não bloqueia */ }
 }
 

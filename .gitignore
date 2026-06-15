@@ -5,3 +5,5 @@ _stripe_resp.json
 .claude/
 .DS_Store
 Thumbs.db
+
+_utmify_key.txt
