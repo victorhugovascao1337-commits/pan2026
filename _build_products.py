@@ -343,6 +343,15 @@ products = [
       ext="https://www.paniniamerica.net/fifa-world-cup-2026-official-sticker-collection-25-pack-box.html"),
 ]
 
+# Corrige preços invertidos: a pessoa paga o MENOR; o riscado (compare) é o MAIOR.
+for _p in products:
+    if _p.get("compare"):
+        try:
+            if float(_p["price"]) > float(_p["compare"]):
+                _p["price"], _p["compare"] = _p["compare"], _p["price"]
+        except ValueError:
+            pass
+
 
 def build_main(p):
     t = esc(p["title"])
