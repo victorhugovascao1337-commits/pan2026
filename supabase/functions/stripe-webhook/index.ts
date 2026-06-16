@@ -35,6 +35,15 @@ async function sha256(s: string): Promise<string> {
 
 const fmtUTC = (d: Date) => d.toISOString().slice(0, 19).replace("T", " ");
 
+// cotação USD -> BRL ao vivo (UTMify trabalha em Reais)
+async function usdToBrl(): Promise<number> {
+  try {
+    const r = await fetch("https://api.frankfurter.app/latest?from=USD&to=BRL");
+    const d = await r.json();
+    return d && d.rates && d.rates.BRL ? d.rates.BRL : 5.5;
+  } catch (_) { return 5.5; }
+}
+
 async function sendFacebook(order: any, items: any[]) {
   if (!FB_CAPI_TOKEN) return;
   const email = (order.email || "").trim().toLowerCase();
@@ -70,6 +79,8 @@ async function sendUtmify(order: any, items: any[], isTest: boolean) {
   if (!UTMIFY_API_TOKEN) return;
   const tp = order.tracking_params || {};
   const now = fmtUTC(new Date());
+  const rate = await usdToBrl();                 // converte USD -> BRL (UTMify usa Reais)
+  const toBrl = (cents: number) => Math.round(cents * rate);
   const body = {
     orderId: order.id,
     platform: "PaniniStore",
@@ -85,14 +96,14 @@ async function sendUtmify(order: any, items: any[], isTest: boolean) {
     },
     products: items.map((it) => ({
       id: (it.products && it.products.slug) || "item", name: it.name,
-      planId: null, planName: null, quantity: it.quantity, priceInCents: it.unit_price_cents,
+      planId: null, planName: null, quantity: it.quantity, priceInCents: toBrl(it.unit_price_cents),
     })),
     trackingParameters: {
       src: tp.src || null, sck: tp.sck || null,
       utm_source: tp.utm_source || null, utm_campaign: tp.utm_campaign || null,
       utm_medium: tp.utm_medium || null, utm_content: tp.utm_content || null, utm_term: tp.utm_term || null,
     },
-    commission: { totalPriceInCents: order.total_cents, gatewayFeeInCents: 0, userCommissionInCents: order.total_cents },
+    commission: { totalPriceInCents: toBrl(order.total_cents), gatewayFeeInCents: 0, userCommissionInCents: toBrl(order.total_cents) },
     isTest: isTest, // automático: pagamento real (live) conta; pagamento de teste do Stripe não polui
   };
   try {
@@ -106,7 +117,7 @@ async function sendUtmify(order: any, items: any[], isTest: boolean) {
       },
       body: JSON.stringify(body),
     });
-    console.log("UTMIFY", resp.status, "isTest=" + isTest, (await resp.text()).slice(0, 400));
+    console.log("UTMIFY", resp.status, "isTest=" + isTest, "USD->BRL=" + rate, (await resp.text()).slice(0, 400));
   } catch (e) { console.log("UTMIFY ERROR", String(e)); }
 }
 
