@@ -78,7 +78,11 @@ async function sendUtmify(order: any, items: any[], isTest: boolean) {
     createdAt: order.created_at ? fmtUTC(new Date(order.created_at)) : now,
     approvedDate: now,
     refundedAt: null,
-    customer: { name: order.shipping_name || null, email: order.email || null, phone: null, document: null, country: "US" },
+    customer: {
+      name: order.shipping_name || (order.email ? order.email.split("@")[0] : "Cliente"),
+      email: order.email || "sem-email@panini.store",
+      phone: null, document: null, country: "US",
+    },
     products: items.map((it) => ({
       id: (it.products && it.products.slug) || "item", name: it.name,
       planId: null, planName: null, quantity: it.quantity, priceInCents: it.unit_price_cents,

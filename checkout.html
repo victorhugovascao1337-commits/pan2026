@@ -349,6 +349,9 @@ var btn = document.getElementById('pay-btn');
 var msg = document.getElementById('pay-msg');
 btn.addEventListener('click', async function(){
   msg.className=''; msg.textContent='';
+  var em = document.getElementById('email').value.trim();
+  var fn = document.getElementById('fname').value.trim();
+  if(!em || !fn){ msg.className='err'; msg.textContent = 'Please enter your email and name.'; return; }
   btn.disabled = true; btn.textContent = 'Processing...';
   var sub = await elements.submit();
   if(sub.error){ msg.className='err'; msg.textContent = sub.error.message; btn.disabled=false; btn.textContent='Complete Purchase'; return; }
