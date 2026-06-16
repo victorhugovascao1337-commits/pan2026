@@ -134,8 +134,8 @@
     <label class="fld">Country/Region</label>
     <select class="inp mb" id="country"><option selected>United States</option></select>
     <div class="grid2 mb">
-      <input class="inp" id="fname" placeholder="First name" autocomplete="given-name">
-      <input class="inp" id="lname" placeholder="Last name" autocomplete="family-name">
+      <input class="inp" id="fname" placeholder="First name" autocomplete="off" data-1p-ignore data-lpignore="true">
+      <input class="inp" id="lname" placeholder="Last name" autocomplete="off" data-1p-ignore data-lpignore="true">
     </div>
     <input class="inp mb" id="addr" placeholder="Address" autocomplete="address-line1">
     <input class="inp mb" id="addr2" placeholder="Apartment, suite, etc. (optional)">
@@ -434,6 +434,19 @@ btn.addEventListener('click', async function(){
     box.style.display='block';
   }
   document.addEventListener('click', function(e){ if(e.target!==addr && !box.contains(e.target)) box.style.display='none'; });
+})();
+
+/* garante texto visível nos campos mesmo se o Stripe Link / autofill aplicar estilo */
+(function(){
+  function forceColor(){
+    ['fname','lname','email','addr','addr2','city','state','zip','phone'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el){ el.style.setProperty('color','#1a1a1a','important'); el.style.setProperty('-webkit-text-fill-color','#1a1a1a','important'); el.style.setProperty('opacity','1','important'); }
+    });
+  }
+  forceColor();
+  [600,1500,3000,5000].forEach(function(ms){ setTimeout(forceColor, ms); });   // cobre o Link que carrega depois
+  document.addEventListener('input', forceColor, true);
 })();
 </script>
 </body>
