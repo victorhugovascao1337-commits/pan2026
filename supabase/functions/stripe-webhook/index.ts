@@ -60,9 +60,10 @@ async function sendFacebook(order: any, items: any[]) {
     }],
   };
   try {
-    await fetch(`https://graph.facebook.com/v21.0/${FB_PIXEL_ID}/events?access_token=${FB_CAPI_TOKEN}`,
+    const resp = await fetch(`https://graph.facebook.com/v21.0/${FB_PIXEL_ID}/events?access_token=${FB_CAPI_TOKEN}`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  } catch (_) { /* não bloqueia */ }
+    console.log("FB CAPI", resp.status, (await resp.text()).slice(0, 300));
+  } catch (e) { console.log("FB CAPI ERROR", String(e)); }
 }
 
 async function sendUtmify(order: any, items: any[], isTest: boolean) {
@@ -91,7 +92,7 @@ async function sendUtmify(order: any, items: any[], isTest: boolean) {
     isTest: isTest, // automático: pagamento real (live) conta; pagamento de teste do Stripe não polui
   };
   try {
-    await fetch("https://api.utmify.com.br/api-credentials/orders", {
+    const resp = await fetch("https://api.utmify.com.br/api-credentials/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -101,7 +102,8 @@ async function sendUtmify(order: any, items: any[], isTest: boolean) {
       },
       body: JSON.stringify(body),
     });
-  } catch (_) { /* não bloqueia */ }
+    console.log("UTMIFY", resp.status, "isTest=" + isTest, (await resp.text()).slice(0, 400));
+  } catch (e) { console.log("UTMIFY ERROR", String(e)); }
 }
 
 serve(async (req) => {
@@ -125,6 +127,7 @@ serve(async (req) => {
       const order = (await (await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=*`, { headers: sb })).json())[0];
       const items = await (await fetch(`${SUPABASE_URL}/rest/v1/order_items?order_id=eq.${orderId}&select=name,quantity,unit_price_cents,products(slug)`, { headers: sb })).json();
       // 3) dispara Facebook + UTMify
+      console.log("WEBHOOK order", orderId, "livemode", pi.livemode, "orderFound", !!order, "items", (items || []).length, "utm", JSON.stringify(order && order.tracking_params), "tokens", { fb: !!FB_CAPI_TOKEN, utmify: !!UTMIFY_API_TOKEN });
       if (order) await Promise.allSettled([sendFacebook(order, items), sendUtmify(order, items, !pi.livemode)]);
     }
   }
