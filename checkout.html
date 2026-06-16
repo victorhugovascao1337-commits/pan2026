@@ -32,8 +32,9 @@
   .divider{ display:flex; align-items:center; gap:14px; color:var(--muted); font-size:12px; margin:16px 0; }
   .divider::before,.divider::after{ content:""; flex:1; height:1px; background:var(--line); }
   label.fld{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
-  .inp, select.inp{ width:100%; height:46px; border:1px solid #c9cccf; border-radius:8px; padding:0 12px; font-size:15px; background:#fff; outline:none; }
+  .inp, select.inp{ width:100%; height:46px; border:1px solid #c9cccf; border-radius:8px; padding:0 12px; font-size:15px; background:#fff; color:#1a1a1a; -webkit-text-fill-color:#1a1a1a; outline:none; }
   .inp:focus{ border-color:var(--brand); box-shadow:0 0 0 1px var(--brand); }
+  .inp:-webkit-autofill, .inp:-webkit-autofill:focus{ -webkit-text-fill-color:#1a1a1a; -webkit-box-shadow:0 0 0 1000px #fff inset; caret-color:#1a1a1a; }
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
   .mb{ margin-bottom:12px; }
@@ -266,20 +267,21 @@ var zipStatus = document.getElementById('cep-status');
 async function lookupZip(){
   var raw = (zipEl.value || '').replace(/\D/g, '');
   if(raw.length !== 5){ zipStatus.textContent=''; return; }
+  revealShipping();                       // com 5 dígitos já libera o frete (não bloqueia)
   zipStatus.className = 'cep-status muted'; zipStatus.textContent = 'Looking up address...';
   try{
     var res = await fetch('https://api.zippopotam.us/us/' + raw);
-    if(!res.ok){ zipStatus.className='cep-status err'; zipStatus.textContent='ZIP code not found.'; return; }
+    if(!res.ok){ zipStatus.textContent=''; return; }   // CEP fora da base do Zippopotam: segue sem erro
     var d = await res.json();
     var p = d.places && d.places[0];
     if(p){
-      document.getElementById('city').value = p['place name'] || '';
-      document.getElementById('state').value = p['state abbreviation'] || '';
+      var cityEl = document.getElementById('city'), stEl = document.getElementById('state');
+      if(!cityEl.value) cityEl.value = p['place name'] || '';            // não sobrescreve o autocomplete
+      if(!stEl.value || stEl.value.length > 2) stEl.value = p['state abbreviation'] || '';
       zipStatus.className = 'cep-status ok';
       zipStatus.textContent = '✓ ' + (p['place name'] || '') + ', ' + (p['state abbreviation'] || '');
-    }
-    revealShipping();
-  }catch(e){ zipStatus.className='cep-status err'; zipStatus.textContent='Error looking up ZIP.'; }
+    } else { zipStatus.textContent=''; }
+  }catch(e){ zipStatus.textContent=''; }
 }
 zipEl.addEventListener('input', lookupZip);
 zipEl.addEventListener('blur', lookupZip);
@@ -375,6 +377,7 @@ btn.addEventListener('click', async function(){
 /* ---------- Address autocomplete (Photon / OpenStreetMap, grátis) ---------- */
 (function(){
   var addr=document.getElementById('addr'); if(!addr) return;
+  var ST={'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA','Colorado':'CO','Connecticut':'CT','Delaware':'DE','Florida':'FL','Georgia':'GA','Hawaii':'HI','Idaho':'ID','Illinois':'IL','Indiana':'IN','Iowa':'IA','Kansas':'KS','Kentucky':'KY','Louisiana':'LA','Maine':'ME','Maryland':'MD','Massachusetts':'MA','Michigan':'MI','Minnesota':'MN','Mississippi':'MS','Missouri':'MO','Montana':'MT','Nebraska':'NE','Nevada':'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND','Ohio':'OH','Oklahoma':'OK','Oregon':'OR','Pennsylvania':'PA','Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD','Tennessee':'TN','Texas':'TX','Utah':'UT','Vermont':'VT','Virginia':'VA','Washington':'WA','West Virginia':'WV','Wisconsin':'WI','Wyoming':'WY','District of Columbia':'DC'};
   var wrap=document.createElement('div'); wrap.style.position='relative';
   addr.parentNode.insertBefore(wrap, addr); wrap.appendChild(addr);
   var box=document.createElement('div');
@@ -414,10 +417,12 @@ btn.addEventListener('click', async function(){
       it.addEventListener('click', function(){
         addr.value=a.line1;
         document.getElementById('city').value=a.city;
-        document.getElementById('state').value=a.state;
-        var z=document.getElementById('zip');
-        if(a.zip){ z.value=a.zip; z.dispatchEvent(new Event('input',{bubbles:true})); }
+        document.getElementById('state').value=ST[a.state]||a.state;
+        document.getElementById('zip').value=a.zip||'';
         box.style.display='none';
+        // libera o frete direto (não chama o Zippopotam, que tem furos de CEP)
+        if(typeof revealShipping==='function'){ revealShipping(); }
+        else { var z=document.getElementById('zip'); if(a.zip) z.dispatchEvent(new Event('input',{bubbles:true})); }
       });
       box.appendChild(it);
     });
