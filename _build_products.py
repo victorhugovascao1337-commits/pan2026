@@ -163,8 +163,18 @@ STYLE = (
 )
 
 
+def _kind(title):
+    # álbum vs figurinha/box (bundles "Box of ... + Album" contam como figurinha)
+    return "album" if ("Album" in title and "Box of" not in title) else "sticker"
+
+
 def build_upsell(current, products, imgdir):
-    others = [q for q in products if q["slug"] != current][:3]
+    cur = next((q for q in products if q["slug"] == current), None)
+    want = "sticker" if (cur and _kind(cur["title"]) == "album") else "album"
+    # álbum -> mostra figurinhas/boxes; figurinha/box -> mostra álbuns
+    others = [q for q in products if q["slug"] != current and _kind(q["title"]) == want][:3]
+    if not others:  # fallback: qualquer outro
+        others = [q for q in products if q["slug"] != current][:3]
     rows = ""
     for q in others:
         is_copa = "price" in q
