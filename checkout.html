@@ -55,8 +55,9 @@
   .cep-status{ font-size:12px; margin:-4px 0 12px; min-height:14px; }
   .cep-status.ok{ color:#1e7e34; } .cep-status.err{ color:#c0392b; } .cep-status.muted{ color:var(--muted); }
   .pay-head{ display:flex; align-items:center; justify-content:space-between; border:1px solid var(--ink); border-radius:8px 8px 0 0; padding:12px 14px; font-weight:600; font-size:14px; }
-  .pay-cards{ display:flex; gap:5px; }
-  .pay-cards span{ font-size:10px; background:#eef0f2; border:1px solid #e0e3e6; border-radius:3px; padding:2px 4px; color:#555; }
+  .pay-cards{ display:flex; gap:6px; align-items:center; }
+  .pay-cards svg{ height:22px; width:auto; display:block; }
+  .pay-cards .more{ font-size:11px; color:#8a9099; font-weight:700; padding:0 1px; }
   .pay-body{ border:1px solid var(--line); border-top:0; border-radius:0 0 8px 8px; padding:16px 14px; }
   .cta{ width:100%; height:54px; background:#111; color:#fff; border:0; border-radius:8px; font-size:16px; font-weight:700; cursor:pointer; margin-top:18px; }
   .cta:hover{ background:#000; }
@@ -168,7 +169,13 @@
     <p class="muted" style="margin-top:-4px;">All transactions are secure and encrypted.</p>
     <div class="pay-head">
       <span>Credit card</span>
-      <span class="pay-cards"><span>VISA</span><span>MC</span><span>AMEX</span><span>+</span></span>
+      <span class="pay-cards">
+        <svg viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="Visa"><rect width="38" height="24" rx="3" fill="#fff" stroke="#e0e3e6"/><text x="19" y="16.5" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" font-style="italic" fill="#1A1F71" text-anchor="middle" letter-spacing="0.3">VISA</text></svg>
+        <svg viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="Mastercard"><rect width="38" height="24" rx="3" fill="#fff" stroke="#e0e3e6"/><circle cx="15.5" cy="12" r="6.8" fill="#EB001B"/><circle cx="22.5" cy="12" r="6.8" fill="#F79E1B"/><path d="M19 6.3a6.8 6.8 0 0 1 0 11.4 6.8 6.8 0 0 1 0-11.4z" fill="#FF5F00"/></svg>
+        <svg viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="American Express"><rect width="38" height="24" rx="3" fill="#1F72CF"/><text x="19" y="15" font-family="Arial,Helvetica,sans-serif" font-size="7.5" font-weight="700" fill="#fff" text-anchor="middle" letter-spacing="0.2">AMEX</text></svg>
+        <svg viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="Discover"><rect width="38" height="24" rx="3" fill="#fff" stroke="#e0e3e6"/><text x="15" y="15" font-family="Arial,Helvetica,sans-serif" font-size="5.4" font-weight="700" fill="#222" text-anchor="middle">DISCOVER</text><circle cx="31.5" cy="13.5" r="4.2" fill="#F76E11"/></svg>
+        <span class="more">+</span>
+      </span>
     </div>
     <div class="pay-body">
       <div id="payment-element"><!-- Stripe Payment Element --></div>
