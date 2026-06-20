@@ -318,6 +318,9 @@ var elements = stripe.elements({
   mode: 'payment',
   amount: Math.round(subtotal*100),
   currency: 'usd',
+  // Lista explícita dos métodos habilitados na conta (cartão+wallets via 'card', + BNPL e wallets diretos).
+  // Sem isso, o modo automático tenta carregar 'transfers' (sem capability) e o Payment Element inteiro quebra.
+  paymentMethodTypes: ['card','amazon_pay','cashapp','affirm','afterpay_clearpay','klarna','link'],
   appearance: { theme:'stripe', variables:{ colorPrimary:'#2b2f8a', borderRadius:'8px' } }
 });
 elements.create('payment', { layout:'tabs' }).mount('#payment-element');
