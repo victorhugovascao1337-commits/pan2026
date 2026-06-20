@@ -303,7 +303,7 @@ msumBar.addEventListener('click', function(){
 updateTotals();
 
 /* ---------- Stripe ---------- */
-var PUBLISHABLE_KEY = 'pk_live_51RcE0vEH1tjzWwsFypYMh5T6DVgw3WWNARKlo11Xzd3kxNzUfj1gJ9hl07OhjWpZTSHIInlSEfuZwvv78molfXMu00naGoFVku';
+var PUBLISHABLE_KEY = 'pk_live_51TWuDcIePXQugrGSxFCGndMfKrQInHpwhdRJUZCB3D8Jb5RuHVM5wIDGlFDoaHHr2CfmbUSXMZSENO5G7h9HxpyH002WHqiRlV';
 // Supabase (anon key is safe in the frontend — protected by RLS)
 var SUPABASE_URL = 'https://finpdwsggcphzqypnebg.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpbnBkd3NnZ2NwaHpxeXBuZWJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzOTk4MzYsImV4cCI6MjA5Njk3NTgzNn0.C9Rq6QcTHi_vKbMLXnyeoS52LzfMbxPO8SY8pq2RoYM';
@@ -318,9 +318,6 @@ var elements = stripe.elements({
   mode: 'payment',
   amount: Math.round(subtotal*100),
   currency: 'usd',
-  // Lista explícita dos métodos habilitados na conta (cartão+wallets via 'card', + BNPL e wallets diretos).
-  // Sem isso, o modo automático tenta carregar 'transfers' (sem capability) e o Payment Element inteiro quebra.
-  paymentMethodTypes: ['card','amazon_pay','cashapp','affirm','afterpay_clearpay','klarna','link'],
   appearance: { theme:'stripe', variables:{ colorPrimary:'#2b2f8a', borderRadius:'8px' } }
 });
 elements.create('payment', { layout:'tabs' }).mount('#payment-element');
