@@ -337,23 +337,8 @@ async function payViaBackend(){
   if(!r.ok || d.error) throw new Error(d.error || ('Backend error ' + r.status));
   return d;
 }
-/* ===== DIAGNÓSTICO TEMPORÁRIO (remover depois) ===== */
-(function(){
-  var box=document.createElement('div');
-  box.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#111;color:#0f0;font:12px/1.5 monospace;padding:8px;white-space:pre-wrap;max-height:40vh;overflow:auto';
-  document.body.appendChild(box);
-  window.__DBG=function(s){ box.textContent += s+'\n'; console.log('[DBG] '+s); };
-  __DBG('host: '+location.hostname+'  proto: '+location.protocol);
-  try{
-    var pr=stripe.paymentRequest({country:'US',currency:'usd',total:{label:'t',amount:10500},requestPayerName:true});
-    pr.canMakePayment().then(function(r){ __DBG('canMakePayment: '+JSON.stringify(r)); });
-  }catch(e){ __DBG('canMakePayment err: '+e.message); }
-})();
-/* ===== fim diagnóstico ===== */
 try {
   var ece = elements.create('expressCheckout', { paymentMethods: { link: 'never' } });
-  ece.on('ready', function(ev){ if(window.__DBG) __DBG('ece ready -> availablePaymentMethods: '+JSON.stringify(ev.availablePaymentMethods||'none')); });
-  ece.on('loaderror', function(ev){ if(window.__DBG) __DBG('ece loaderror: '+(ev.error&&ev.error.message)); });
   ece.on('confirm', async function(){
     var m = document.getElementById('pay-msg'); m.className=''; m.textContent='';
     var sub = await elements.submit();
