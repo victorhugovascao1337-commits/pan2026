@@ -99,7 +99,7 @@ serve(async (req) => {
     if (email) body.set("receipt_email", String(email));
     body.set("metadata[order_id]", String(orderId));
     body.set("metadata[shipping]", String(shipping));
-    body.set("description", "AKG Store order " + orderId);
+    body.set("description", "mayvul order " + orderId);
 
     const sr = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",
