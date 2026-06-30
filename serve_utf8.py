@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
@@ -20,6 +21,6 @@ class H(SimpleHTTPRequestHandler):
         return t
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 5600
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 5600))
     print("serving %s on %d (utf-8)" % (DIRECTORY, port))
     ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
