@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Checkout | Panini America</title>
 <link rel="icon" href="fav-icon-1.png">
-<script src="https://js.stripe.com/v3/"></script>
+<script src="https://js.pagou.ai/payments/v3.js"></script>
 <script src="tracking.js"></script>
 <style>
   :root{ --ink:#1a1a1a; --muted:#6b7177; --line:#e3e3e3; --brand:#2b2f8a; --bg:#fff; --summary:#fafafa; }
@@ -112,7 +112,7 @@
       <small>Express checkout</small>
     </div>
 
-    <div id="express-checkout-element" style="margin-bottom:10px;"></div>
+    <div id="express-checkout-element" style="display:none;"><!-- Apple/Google Pay não disponível na pagou.ai --></div>
     <div id="express-fallback">
       <button class="xbtn x-shop xfull" type="button" aria-label="Shop Pay">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 47 20" role="img" aria-label="Shop" style="fill:#fff;height:21px;width:auto;"><path d="m9.095 6.766-2.33 1.186C6.233 7.035 5.5 6.565 4.48 6.565q-1.665 0-1.665 1.007c0 .716.821.873 2.663 1.275 1.842.403 3.931.985 3.931 3.29 0 2.238-1.73 3.58-4.593 3.58-2.308 0-4.02-.984-4.816-2.73l2.33-1.163c.488 1.077 1.331 1.633 2.486 1.633 1.198 0 1.797-.335 1.797-1.052 0-.716-.823-.872-2.668-1.275C2.101 10.727.02 10.145.02 7.84c0-2.17 1.709-3.536 4.46-3.536 2.153 0 3.773.873 4.615 2.462M11.05.5h2.884v5.102c.754-.828 1.842-1.298 3.085-1.298 2.485 0 4.26 1.925 4.26 4.655v6.646h-2.884V8.959c0-1.275-.932-2.216-2.22-2.216-1.287 0-2.24.962-2.24 2.216v6.646h-2.886zm12.116 4.61c.954-.671 2.33-1.14 3.795-1.14 3.906 0 6.746 2.663 6.746 6.311 0 3.401-2.441 5.774-5.837 5.774-2.907 0-4.992-1.97-4.992-4.61 0-1.79 1.067-3.111 2.574-3.626l1.22 2.082c-.82.38-1.13.94-1.13 1.633 0 1.14.955 1.947 2.33 1.947 1.687 0 3.018-1.343 3.018-3.155 0-2.127-1.664-3.737-3.927-3.737a4.5 4.5 0 0 0-2.508.738zm15.024 9.22v5.17h-2.885V4.417h2.818V5.78c.866-.94 2.086-1.477 3.462-1.477 3.04 0 5.415 2.484 5.415 5.707s-2.375 5.707-5.415 5.707c-1.354 0-2.53-.515-3.395-1.388m5.947-4.341c0-1.858-1.287-3.223-3.04-3.223-1.731 0-3.04 1.388-3.04 3.223s1.309 3.223 3.04 3.223c1.753 0 3.042-1.366 3.042-3.223z"></path></svg>
@@ -178,7 +178,7 @@
       </span>
     </div>
     <div class="pay-body">
-      <div id="payment-element"><!-- Stripe Payment Element --></div>
+      <div id="card-element"><!-- Pagou Payment Element (card) --></div>
     </div>
 
     <button class="cta" id="pay-btn">Complete Purchase</button>
@@ -253,7 +253,6 @@ function updateTotals(){
   }
   document.getElementById('total').textContent = money(total);
   var mst = document.getElementById('msum-total'); if(mst) mst.textContent = money(total);
-  if(window._elements){ try{ window._elements.update({ amount: Math.round(total*100) }); }catch(e){} }
 }
 function revealShipping(){
   if(!shippingReady){
@@ -309,8 +308,11 @@ msumBar.addEventListener('click', function(){
 
 updateTotals();
 
-/* ---------- Stripe ---------- */
-var PUBLISHABLE_KEY = 'pk_live_51TldDsFfQIcndup2hE3JbzA0epW2mL2aXZI2xkfa9e0pQZoBavDMhS78X4c3imiUmX6GeK8de6vV5dUH6SV4E3lg00FeR6NU0I';
+/* ================= Pagou.ai =================
+   COLE AQUI a sua chave PÚBLICA da pagou (pk_test_... no sandbox, pk_live_... em produção).
+   A chave SECRETA (token) NÃO vai aqui — fica no Supabase (secret PAGOU_SECRET_KEY). */
+var PAGOU_PUBLIC_KEY = 'pk_test_COLE_SUA_CHAVE_PUBLICA_AQUI';
+var PAGOU_ENV = 'sandbox'; // 'sandbox' para teste, 'production' quando for pra valer
 // Supabase (anon key is safe in the frontend — protected by RLS)
 var SUPABASE_URL = 'https://finpdwsggcphzqypnebg.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpbnBkd3NnZ2NwaHpxeXBuZWJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzOTk4MzYsImV4cCI6MjA5Njk3NTgzNn0.C9Rq6QcTHi_vKbMLXnyeoS52LzfMbxPO8SY8pq2RoYM';
@@ -320,69 +322,61 @@ function chkAddr(){
   return { name:(g('fname')+' '+g('lname')).trim(), line1:g('addr'), city:g('city'), state:g('state'), zip:g('zip'), country:g('country') };
 }
 
-var stripe = Stripe(PUBLISHABLE_KEY);
-var elements = stripe.elements({
-  mode: 'payment',
-  amount: Math.round(subtotal*100),
-  currency: 'usd',
-  appearance: { theme:'stripe', variables:{ colorPrimary:'#2b2f8a', borderRadius:'8px' } }
-});
-elements.create('payment', { layout:'tabs' }).mount('#payment-element');
-window._elements = elements; updateTotals();
+/* ---------- Inicializa o Payment Element da pagou ---------- */
+Pagou.setEnvironment(PAGOU_ENV);
+var elements = Pagou.elements({ publicKey: PAGOU_PUBLIC_KEY, locale: 'en', origin: window.location.origin });
+var card = elements.create('card', { theme: 'default', locale: 'en' });
+card.mount('#card-element');
 
-/* ---------- Apple Pay / Google Pay / Link (Stripe Express Checkout) ---------- */
-// Renders the official, functional buttons when the device supports them.
-// Apple Pay only appears on HTTPS + a domain verified in Stripe (not on http://localhost).
-async function payViaBackend(){
-  var lineItems = cart.map(function(i){ return { slug: i.slug, quantity: i.qty }; });
-  var r = await fetch(CREATE_INTENT_URL, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json', 'apikey': SUPABASE_ANON, 'Authorization':'Bearer ' + SUPABASE_ANON },
-    body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value, address: chkAddr(), utm: (window.Track ? Track.getUTMs() : {}) })
-  });
-  var d = await r.json();
-  if(!r.ok || d.error) throw new Error(d.error || ('Backend error ' + r.status));
-  return d;
-}
-try {
-  var ece = elements.create('expressCheckout', { paymentMethods: { link: 'never' } });
-  ece.on('confirm', async function(){
-    var m = document.getElementById('pay-msg'); m.className=''; m.textContent='';
-    var sub = await elements.submit();
-    if(sub.error){ m.className='err'; m.textContent = sub.error.message; return; }
-    try {
-      var d = await payViaBackend();
-      var result = await stripe.confirmPayment({ elements: elements, clientSecret: d.clientSecret, confirmParams:{ return_url: location.origin + '/checkout-success.html?order=' + d.orderId } });
-      if(result.error){ m.className='err'; m.textContent = result.error.message; }
-    } catch(err){ m.className='err'; m.textContent = err.message; }
-  });
-  ece.mount('#express-checkout-element');
-} catch(e){ /* express element unavailable */ }
-
+var cardValid = false, submitting = false;
 var btn = document.getElementById('pay-btn');
 var msg = document.getElementById('pay-msg');
+function syncBtn(){ btn.disabled = submitting; }
+card.on('change', function(ev){ cardValid = !!(ev && ev.valid); });
+
+updateTotals();
+
+/* ---------- Botão pagar: tokeniza o cartão e cria a transação no backend ---------- */
 btn.addEventListener('click', async function(){
   msg.className=''; msg.textContent='';
   var em = document.getElementById('email').value.trim();
   var fn = document.getElementById('fname').value.trim();
   if(!em || !fn){ msg.className='err'; msg.textContent = 'Please enter your email and name.'; return; }
-  btn.disabled = true; btn.textContent = 'Processing...';
-  var sub = await elements.submit();
-  if(sub.error){ msg.className='err'; msg.textContent = sub.error.message; btn.disabled=false; btn.textContent='Complete Purchase'; return; }
+  if(!cardValid){ msg.className='err'; msg.textContent = 'Please enter valid card details.'; return; }
+  submitting = true; syncBtn(); btn.textContent = 'Processing...';
 
   try {
     var lineItems = cart.map(function(i){ return { slug: i.slug, quantity: i.qty, mult: i.mult || 1, variant: i.variant || '' }; });
-    var r = await fetch(CREATE_INTENT_URL, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'apikey': SUPABASE_ANON, 'Authorization':'Bearer ' + SUPABASE_ANON },
-      body: JSON.stringify({ items: lineItems, shipping: shippingMethod, email: document.getElementById('email').value, address: chkAddr(), utm: (window.Track ? Track.getUTMs() : {}) })
+    var result = await elements.submit({
+      createTransaction: async function(tokenData){
+        var r = await fetch(CREATE_INTENT_URL, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'apikey': SUPABASE_ANON, 'Authorization':'Bearer ' + SUPABASE_ANON },
+          body: JSON.stringify({
+            items: lineItems, shipping: shippingMethod, email: em, address: chkAddr(),
+            utm: (window.Track ? Track.getUTMs() : {}),
+            token: tokenData.token, installments: 1
+          })
+        });
+        var d = await r.json();
+        if(!r.ok || d.error){ throw new Error(d.error || ('Backend error (' + r.status + '). Is the create-checkout function deployed?')); }
+        window._lastOrderId = d.orderId;
+        return d; // { id, status, next_action, orderId }
+      }
     });
-    var d = await r.json();
-    if(!r.ok || d.error){ msg.className='err'; msg.textContent = d.error || ('Backend error (' + r.status + '). Is the create-checkout function deployed?'); btn.disabled=false; btn.textContent='Complete Purchase'; return; }
-    var result = await stripe.confirmPayment({ elements: elements, clientSecret: d.clientSecret, confirmParams:{ return_url: location.origin + '/checkout-success.html?order=' + d.orderId } });
-    if(result.error){ msg.className='err'; msg.textContent = result.error.message; }
+
+    // status final da transação (o SDK já trata o desafio 3DS via next_action)
+    var st = (result && (result.status || (result.transaction && result.transaction.status))) || '';
+    var okStatuses = ['paid','captured','authorized','approved','succeeded'];
+    if(okStatuses.indexOf(String(st)) >= 0){
+      location.href = location.origin + '/checkout-success.html?order=' + (window._lastOrderId || '');
+    } else if(result && result.error){
+      msg.className='err'; msg.textContent = result.error.message || 'Payment failed.';
+    } else {
+      msg.className='err'; msg.textContent = 'Payment not completed (status: ' + (st || 'unknown') + ').';
+    }
   } catch(err){ msg.className='err'; msg.textContent = 'Error: ' + err.message; }
-  btn.disabled=false; btn.textContent='Complete Purchase';
+  submitting = false; syncBtn(); btn.textContent='Complete Purchase';
 });
 </script>
 <script>
