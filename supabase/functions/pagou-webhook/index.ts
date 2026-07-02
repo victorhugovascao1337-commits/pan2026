@@ -1,32 +1,30 @@
-// Supabase Edge Function: stripe-webhook
-// Valida a assinatura do Stripe, marca o pedido como 'paid' e dispara:
+// Supabase Edge Function: pagou-webhook
+// Recebe eventos da pagou.ai. Como a pagou não expõe publicamente o formato da
+// assinatura, confirmamos o pagamento por RECONCILIAÇÃO: ao chegar o evento,
+// consultamos GET /v2/transactions/:id na própria pagou e só marcamos o pedido
+// como 'paid' se a API confirmar status pago (paid/captured).
+// Depois dispara:
 //  - Facebook Conversions API (Purchase, dedup pelo event_id = order.id)
 //  - UTMify Orders API (pedido pago + UTMs)
 // Deploy com "Verify JWT" DESLIGADO.
-// Secrets: STRIPE_WEBHOOK_SECRET, FB_CAPI_TOKEN, UTMIFY_API_TOKEN
+// Secrets: PAGOU_SECRET_KEY, FB_CAPI_TOKEN, UTMIFY_API_TOKEN
+//          (PAGOU_API_BASE opcional — default https://api.pagou.ai)
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
-const WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
+const PAGOU_SECRET = Deno.env.get("PAGOU_SECRET_KEY")!;
+const PAGOU_API_BASE = Deno.env.get("PAGOU_API_BASE") || "https://api.pagou.ai";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const FB_PIXEL_ID = "28181409881448447";                 // público
 const FB_CAPI_TOKEN = Deno.env.get("FB_CAPI_TOKEN") || "";
 const UTMIFY_API_TOKEN = Deno.env.get("UTMIFY_API_TOKEN") || "";
+const IS_SANDBOX = /sandbox|local/i.test(PAGOU_API_BASE);
 
 const sb = { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, "Content-Type": "application/json" };
 const enc = new TextEncoder();
 
-async function verify(rawBody: string, sigHeader: string): Promise<boolean> {
-  if (!sigHeader) return false;
-  const parts: Record<string, string> = {};
-  for (const kv of sigHeader.split(",")) { const i = kv.indexOf("="); if (i > 0) parts[kv.slice(0, i).trim()] = kv.slice(i + 1).trim(); }
-  const t = parts["t"], v1 = parts["v1"];
-  if (!t || !v1) return false;
-  const key = await crypto.subtle.importKey("raw", enc.encode(WEBHOOK_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const mac = await crypto.subtle.sign("HMAC", key, enc.encode(`${t}.${rawBody}`));
-  const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return hex === v1;
-}
+// status que contam como pago na pagou
+const PAID = new Set(["paid", "captured", "authorized", "approved", "succeeded"]);
 
 async function sha256(s: string): Promise<string> {
   const b = await crypto.subtle.digest("SHA-256", enc.encode(s));
@@ -104,7 +102,7 @@ async function sendUtmify(order: any, items: any[], isTest: boolean) {
       utm_medium: tp.utm_medium || null, utm_content: tp.utm_content || null, utm_term: tp.utm_term || null,
     },
     commission: { totalPriceInCents: toBrl(order.total_cents), gatewayFeeInCents: 0, userCommissionInCents: toBrl(order.total_cents) },
-    isTest: isTest, // automático: pagamento real (live) conta; pagamento de teste do Stripe não polui
+    isTest: isTest, // sandbox conta como teste; produção conta como venda real
   };
   try {
     const resp = await fetch("https://api.utmify.com.br/api-credentials/orders", {
@@ -121,29 +119,49 @@ async function sendUtmify(order: any, items: any[], isTest: boolean) {
   } catch (e) { console.log("UTMIFY ERROR", String(e)); }
 }
 
-serve(async (req) => {
-  const sig = req.headers.get("stripe-signature") || "";
-  const raw = await req.text();
-  if (!(await verify(raw, sig))) return new Response("invalid signature", { status: 400 });
+// Confirma o pagamento direto na pagou (não confia só no corpo do webhook)
+async function confirmPaid(txId: string): Promise<{ ok: boolean; status: string; metadata?: string }> {
+  try {
+    const r = await fetch(`${PAGOU_API_BASE}/v2/transactions/${txId}`, {
+      headers: { Authorization: `Bearer ${PAGOU_SECRET}` },
+    });
+    const t = await r.json();
+    const status = String(t.status || "").toLowerCase();
+    return { ok: r.ok && PAID.has(status), status, metadata: t.metadata != null ? String(t.metadata) : undefined };
+  } catch (e) {
+    console.log("PAGOU confirm ERROR", String(e));
+    return { ok: false, status: "error" };
+  }
+}
 
+serve(async (req) => {
+  const raw = await req.text();
   let event: any;
   try { event = JSON.parse(raw); } catch { return new Response("bad json", { status: 400 }); }
 
-  if (event.type === "payment_intent.succeeded") {
-    const pi = event.data.object;
-    const orderId = pi?.metadata?.order_id;
-    if (orderId) {
-      // 1) marca como paid
+  // Envelope de pagamentos da pagou: { id, event:"transaction", data:{ id, event_type, status, metadata } }
+  const data = event.data || {};
+  const eventType = String(data.event_type || event.type || "");
+  const txId = data.id || event.id;
+
+  // só nos interessa transação paga
+  if (event.event === "transaction" && eventType === "transaction.paid" && txId) {
+    // reconciliação: confirma na API antes de marcar
+    const chk = await confirmPaid(txId);
+    const orderId = chk.metadata || (data.metadata != null ? String(data.metadata) : "");
+    console.log("WEBHOOK pagou tx", txId, "confirmed", chk.ok, "status", chk.status, "order", orderId);
+
+    if (chk.ok && orderId) {
+      // 1) marca como paid (reaproveita a coluna de id de pagamento existente)
       await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, {
         method: "PATCH", headers: { ...sb, Prefer: "return=minimal" },
-        body: JSON.stringify({ status: "paid", stripe_payment_intent: pi.id, email: pi.receipt_email || undefined }),
+        body: JSON.stringify({ status: "paid", stripe_payment_intent: txId }),
       });
       // 2) busca pedido + itens
       const order = (await (await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=*`, { headers: sb })).json())[0];
       const items = await (await fetch(`${SUPABASE_URL}/rest/v1/order_items?order_id=eq.${orderId}&select=name,quantity,unit_price_cents,products(slug)`, { headers: sb })).json();
       // 3) dispara Facebook + UTMify
-      console.log("WEBHOOK order", orderId, "livemode", pi.livemode, "orderFound", !!order, "items", (items || []).length, "utm", JSON.stringify(order && order.tracking_params), "tokens", { fb: !!FB_CAPI_TOKEN, utmify: !!UTMIFY_API_TOKEN });
-      if (order) await Promise.allSettled([sendFacebook(order, items), sendUtmify(order, items, !pi.livemode)]);
+      if (order) await Promise.allSettled([sendFacebook(order, items), sendUtmify(order, items, IS_SANDBOX)]);
     }
   }
 

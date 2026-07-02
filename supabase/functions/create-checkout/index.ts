@@ -1,11 +1,15 @@
 // Supabase Edge Function: create-checkout
 // 1) Recebe o carrinho (slugs + quantidades) e busca o PREÇO REAL no banco
 // 2) Cria um pedido (status 'pending') em orders + order_items
-// 3) Cria um PaymentIntent no Stripe com metadata.order_id e devolve o clientSecret
-// Secrets: STRIPE_SECRET_KEY  (SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são automáticos)
+// 3) Cria uma transação de cartão na pagou.ai (POST /v2/transactions) com o
+//    token tokenizado no front e metadata = order_id; devolve id/status/next_action
+// Secrets: PAGOU_SECRET_KEY  (SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são automáticos)
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
-const STRIPE_SECRET = Deno.env.get("STRIPE_SECRET_KEY")!;
+const PAGOU_SECRET = Deno.env.get("PAGOU_SECRET_KEY")!;
+// Base da API: produção "https://api.pagou.ai". Para sandbox use o env PAGOU_API_BASE.
+const PAGOU_API_BASE = Deno.env.get("PAGOU_API_BASE") || "https://api.pagou.ai";
+const CURRENCY = (Deno.env.get("PAGOU_CURRENCY") || "USD").toUpperCase();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SHIPPING: Record<string, number> = { standard: 0, express: 2000 };
@@ -34,9 +38,11 @@ const sbHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { items = [], shipping = "standard", email, address, utm } = await req.json();
+    const { items = [], shipping = "standard", email, address, utm, token, installments = 1 } = await req.json();
     if (!Array.isArray(items) || items.length === 0) return json({ error: "Empty cart" }, 400);
+    if (!token) return json({ error: "Missing card token" }, 400);
     const a = address || {};
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "";
 
     // slugs -> produtos reais do banco (preço autoritativo)
     const slugs = items.map((i: any) => String(i.slug));
@@ -72,7 +78,7 @@ serve(async (req) => {
       headers: { ...sbHeaders, Prefer: "return=representation" },
       body: JSON.stringify({
         email: email || null, status: "pending", subtotal_cents: subtotal,
-        shipping_cents: shippingCents, total_cents: total, currency: "usd",
+        shipping_cents: shippingCents, total_cents: total, currency: CURRENCY.toLowerCase(),
         tracking_number: uspsCode(), carrier: "USPS",
         shipping_name: a.name || null, shipping_address: a.line1 || null,
         shipping_city: a.city || null, shipping_state: a.state || null,
@@ -91,25 +97,49 @@ serve(async (req) => {
       body: JSON.stringify(lineItems.map((li) => ({ ...li, order_id: orderId }))),
     });
 
-    // 2) PaymentIntent com order_id na metadata
-    const body = new URLSearchParams();
-    body.set("amount", String(total));
-    body.set("currency", "usd");
-    body.set("automatic_payment_methods[enabled]", "true");
-    if (email) body.set("receipt_email", String(email));
-    body.set("metadata[order_id]", String(orderId));
-    body.set("metadata[shipping]", String(shipping));
-    body.set("description", "mayvul Store order " + orderId);
+    // 2) Transação de cartão na pagou.ai (POST /v2/transactions)
+    //    - amount em centavos, token vem tokenizado do front (SDK v3)
+    //    - metadata = order_id para casar no webhook (transaction.paid)
+    const txBody = {
+      amount: total,
+      currency: CURRENCY,
+      method: "credit_card",
+      installments: Math.max(1, parseInt(String(installments)) || 1),
+      token,
+      buyer: {
+        name: a.name || undefined,
+        email: email || undefined,
+        address: {
+          street: a.line1 || undefined,
+          city: a.city || undefined,
+          state: a.state || undefined,
+          zipCode: a.zip || undefined,
+          country: a.country || "United States",
+        },
+      },
+      products: lineItems.map((li) => ({ name: li.name, price: li.unit_price_cents, quantity: li.quantity })),
+      metadata: String(orderId),
+      traceable: true,
+      ip_address: ip || undefined,
+    };
 
-    const sr = await fetch("https://api.stripe.com/v1/payment_intents", {
+    const sr = await fetch(`${PAGOU_API_BASE}/v2/transactions`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${STRIPE_SECRET}`, "Content-Type": "application/x-www-form-urlencoded" },
-      body,
+      headers: { Authorization: `Bearer ${PAGOU_SECRET}`, "Content-Type": "application/json" },
+      body: JSON.stringify(txBody),
     });
-    const pi = await sr.json();
-    if (pi.error) return json({ error: pi.error.message }, 400);
+    const tx = await sr.json();
+    if (!sr.ok || tx.error) {
+      const msg = tx.error?.message || tx.message || tx.error || `Pagou error ${sr.status}`;
+      return json({ error: String(msg) }, 400);
+    }
 
-    return json({ clientSecret: pi.client_secret, orderId, amount: total, subtotal, shipping: shippingCents });
+    return json({
+      id: tx.id,
+      status: tx.status,
+      next_action: tx.next_action || null,
+      orderId, amount: total, subtotal, shipping: shippingCents,
+    });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
